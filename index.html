@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calculateur RPO : interne, RPO ou cabinet ? | Le Club des RH</title>
+  <meta name="description" content="Calculez votre capacité interne, identifiez votre besoin de renfort et simulez l'allocation de votre budget entre renfort interne, RPO freelance et cabinet de recrutement.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/simulateur.css">
+  <style>
+    /* Styles de la page de démo uniquement (dans Webflow, c'est le site qui s'en charge). */
+    body { margin: 0; background: #FEFCFF; color: #131214; font-family: "Encode Sans", Arial, sans-serif; }
+    .demo-wrap { max-width: 1160px; margin: 0 auto; padding: 56px 16px 80px; }
+    .demo-eyebrow { display: inline-block; padding: 4px 12px; border-radius: 999px; background: #EBE3FD; color: #5E17EB; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+    h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.08; letter-spacing: -.03em; margin: 0 0 16px; max-width: 18ch; }
+    .demo-intro { font-size: 19px; color: #5E5963; max-width: 64ch; margin: 0 0 40px; }
+    .demo-seo { max-width: 760px; margin: 96px auto 0; color: #212121; }
+    .demo-seo h2 { font-size: 26px; margin: 40px 0 10px; }
+    .demo-note { font-size: 13px; color: #8E8A92; border-top: 1px solid #E9E4F0; margin-top: 56px; padding-top: 16px; }
+  </style>
+</head>
+<body>
+  <main class="demo-wrap">
+    <span class="demo-eyebrow">Outil gratuit · Ressources</span>
+    <h1>Votre équipe peut-elle absorber votre plan de recrutement ?</h1>
+    <p class="demo-intro">Calculez votre capacité interne, identifiez votre besoin de renfort et simulez l'allocation de votre budget entre renfort interne, RPO freelance et cabinet de recrutement.</p>
+
+    <!-- ===== Début de l'Embed Webflow ===== -->
+    <div id="crs-simulator"></div>
+    <!-- ===== Fin de l'Embed Webflow ===== -->
+
+    <section class="demo-seo">
+      <h2>Qu'est-ce qu'un RPO ?</h2>
+      <p>[Contenu SEO rédigé dans Webflow — voir la trame dans README.md]</p>
+      <h2>Quand faire appel à un RPO ?</h2>
+      <h2>Différence entre RPO et cabinet de recrutement</h2>
+      <h2>RPO ou recrutement interne ?</h2>
+      <h2>Comment calculer la capacité d'une équipe recrutement ?</h2>
+      <h2>Combien coûte un RPO ?</h2>
+      <h2>Comment dimensionner une équipe recrutement ?</h2>
+      <h2>Comment répartir son budget entre recrutement interne, RPO et cabinets ?</h2>
+      <p class="demo-note">Page de démonstration locale. Le formulaire de secours affiche les données dans la console (aucun envoi).</p>
+    </section>
+  </main>
+
+  <script src="src/config.js"></script>
+  <script src="src/calc.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>

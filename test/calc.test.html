@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Tests — calculs du simulateur</title>
+  <style>
+    body { font: 14px/1.5 ui-monospace, Menlo, monospace; margin: 24px; background: #fff; color: #131214; }
+    .ok { color: #1E8E5A; } .ko { color: #C8412B; font-weight: 700; }
+    #summary { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div id="summary"></div>
+  <ol id="out"></ol>
+  <script src="../src/config.js"></script>
+  <script src="../src/calc.js"></script>
+  <script>
+    var C = CRSCalc, CFG = CRS_CONFIG, results = [];
+    function test(name, fn) {
+      try { fn(); results.push([name, true]); }
+      catch (e) { results.push([name, false, e.message]); }
+    }
+    function eq(a, b, msg) {
+      var close = typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) < 1e-6 : JSON.stringify(a) === JSON.stringify(b);
+      if (!close) throw new Error((msg || '') + ' attendu ' + JSON.stringify(b) + ', obtenu ' + JSON.stringify(a));
+    }
+    function base(o) {
+      var s = { planned_hires: 80, period_months: 12, turnover_included: 'oui', turnover_replacement_hires: '', additional_turnover_hires: '',
+        internal_recruiters: 3, hires_per_recruiter_month: 3, recruiting_time_percentage: 80,
+        volume_hires: 0, standard_hires: 0, complex_hires: 0, strategic_hires: 0, future_recruitment_volume: '' };
+      for (var k in o) s[k] = o[k];
+      return s;
+    }
+    var H = Object.assign({}, CFG.hypotheses);
+
+    /* §6 */
+    test('Besoin total : turnover inclus', function () { eq(C.computeNeed(base({})).total_hiring_need, 80); });
+    test('Besoin total : turnover non inclus (80 + 12 = 92)', function () {
+      eq(C.computeNeed(base({ turnover_included: 'non', turnover_replacement_hires: 12, additional_turnover_hires: 99 })).total_hiring_need, 92);
+    });
+    test('Besoin total : partiel utilise additional_turnover_hires', function () {
+      eq(C.computeNeed(base({ turnover_included: 'partiel', turnover_replacement_hires: 99, additional_turnover_hires: 5 })).total_hiring_need, 85);
+    });
+    test('Saisie française « 1,45 » et « 60 000 »', function () { eq(C.num('1,45'), 1.45); eq(C.num('60 000'), 60000); eq(C.num(''), null); });
+
+    /* §8 – §10 */
+    test('Capacité : 3 × 3 × 12 × 80 % = 86,4 → affichée 86', function () {
+      var c = C.computeCapacity(base({ planned_hires: 120 }));
+      eq(c.internal_capacity_raw, 86.4); eq(c.internal_capacity, 86);
+    });
+    test('Gap 120 − 86 = 34, couverture 72 %', function () {
+      var c = C.computeCapacity(base({ planned_hires: 120 }));
+      eq(c.capacity_gap, 34); eq(c.capacity_coverage_percentage, 72);
+    });
+    test('Exemple §24 : 92 besoin, 65 capacité → 27 gap, 71 %', function () {
+      // 65 = 1 × 65/12 × 12 × 100 %
+      var c = C.computeCapacity(base({ planned_hires: 80, turnover_included: 'non', turnover_replacement_hires: 12, internal_recruiters: 1, hires_per_recruiter_month: 65 / 12, recruiting_time_percentage: 100 }));
+      eq(c.internal_capacity, 65); eq(c.capacity_gap, 27); eq(c.capacity_coverage_percentage, 71);
+    });
+    test('Pas de gap : minimum 0, couverture plafonnée à 100 %', function () {
+      var c = C.computeCapacity(base({ planned_hires: 50 }));
+      eq(c.capacity_gap, 0); eq(c.has_gap, false); eq(c.capacity_coverage_percentage, 100);
+    });
+    test('Jamais 100 % affiché s’il reste un gap', function () {
+      var c = C.computeCapacity(base({ planned_hires: 200, internal_recruiters: 1, hires_per_recruiter_month: 199 / 12, recruiting_time_percentage: 100 }));
+      eq(c.capacity_gap, 1); eq(c.capacity_coverage_percentage, 99);
+    });
+    test('Arrondi flottant : 3 × 2,1 × 12 × 100 % = 75,6 → 75', function () {
+      eq(C.computeCapacity(base({ hires_per_recruiter_month: 2.1, recruiting_time_percentage: 100 })).internal_capacity, 75);
+    });
+
+    /* §17 */
+    test('RPO : 15×4 + 10×6 + 5×10 = 170 jours, 102 000 €', function () {
+      var r = C.computeRpo({ volume: 15, standard: 10, complex: 5 }, H, CFG);
+      eq(r.days, 170); eq(r.cost, 102000); eq(r.cost_per_hire, 3400); eq(r.months_fulltime, 8.5);
+    });
+
+    /* §19 */
+    test('Cabinet : 5 × 60 000 × 20 % = 60 000 €', function () {
+      var a = C.computeAgency(5, Object.assign({}, H, { average_salary: 60000 }));
+      eq(a.cost, 60000); eq(a.cost_per_hire, 12000);
+    });
+    test('Cabinet sans salaire : coût null (pas de valeur par défaut)', function () { eq(C.computeAgency(5, H).cost, null); });
+
+    /* §20 – §22 */
+    test('Coût employeur 50 000 × 1,45 = 72 500 €', function () {
+      eq(C.annualEmployerCost({ internal_recruiter_salary: 50000, employer_cost_multiplier: 1.45 }), 72500);
+    });
+    test('Pas de valeur par défaut pour salaire recruteur et coefficient', function () {
+      eq(CFG.hypotheses.internal_recruiter_salary, null); eq(CFG.hypotheses.employer_cost_multiplier, null);
+      eq(C.annualEmployerCost(H), null);
+    });
+    test('ETP : 34 / 36 = 0,944 ; coût sur 12 mois', function () {
+      var h = Object.assign({}, H, { internal_recruiter_salary: 50000, employer_cost_multiplier: 1.45 });
+      var i = C.computeInternal(34, base({ recruiting_time_percentage: 100 }), h);
+      eq(i.additional_fte, 34 / 36); eq(i.cost, 72500 * 34 / 36);
+    });
+    test('Coût interne proratisé sur 6 mois', function () {
+      var h = Object.assign({}, H, { internal_recruiter_salary: 50000, employer_cost_multiplier: 1.45 });
+      var i = C.computeInternal(18, base({ period_months: 6, recruiting_time_percentage: 100 }), h);
+      eq(i.additional_fte, 1); eq(i.cost, 36250);
+    });
+
+    /* §26 */
+    test('Rebalance : somme toujours égale au gap', function () {
+      var m = C.rebalance({ internal: 10, rpo: 20, agency: 4 }, 'internal', 30, 34);
+      eq(m, { internal: 30, rpo: 0, agency: 4 });
+      m = C.rebalance(m, 'agency', 10, 34);
+      eq(m.internal + m.rpo + m.agency, 34); eq(m.agency, 10);
+      m = C.rebalance(m, 'internal', 0, 34);
+      eq(m, { internal: 0, rpo: 24, agency: 10 });
+      m = C.rebalance(m, 'rpo', 999, 34);
+      eq(m, { internal: 0, rpo: 34, agency: 0 });
+    });
+    test('Ventilation : le cabinet prend les complexes en priorité', function () {
+      var sp = C.splitTypology({ volume: 15, standard: 10, complex: 5 }, { internal: 0, rpo: 27, agency: 7 });
+      eq(sp.agency, { volume: 0, standard: 2, complex: 5 });
+      eq(sp.rpo, { volume: 15, standard: 8, complex: 0 });
+    });
+    test('Allocation : coût total = interne + RPO + cabinet', function () {
+      var s = base({ planned_hires: 120, recruiting_time_percentage: 100, volume_hires: 15, standard_hires: 10, complex_hires: 5, strategic_hires: 2 });
+      // capacité 108, gap 12 : on reconstruit un cas simple
+      s.planned_hires = 138; // gap 30
+      var h = Object.assign({}, H, { average_salary: 60000, internal_recruiter_salary: 50000, employer_cost_multiplier: 1.5 });
+      var a = C.computeAllocation(s, h, { internal: 0, rpo: 25, agency: 5 }, CFG);
+      eq(a.agency_cost, 60000); eq(a.rpo.days, 15 * 4 + 10 * 6); eq(a.rpo_cost, 120 * 600); eq(a.internal_cost, 0);
+      eq(a.total_allocation_cost, 60000 + 72000);
+    });
+    test('Allocation incomplète si un coût nécessaire manque', function () {
+      var s = base({ planned_hires: 138, recruiting_time_percentage: 100, volume_hires: 15, standard_hires: 10, complex_hires: 5 });
+      var a = C.computeAllocation(s, H, { internal: 0, rpo: 25, agency: 5 }, CFG);
+      eq(a.complete, false); eq(a.total_allocation_cost, null);
+      a = C.computeAllocation(s, H, { internal: 0, rpo: 30, agency: 0 }, CFG);
+      eq(a.complete, true);
+    });
+
+    /* Allocation de départ */
+    test('Allocation de départ : complexes au cabinet, reste en RPO, somme = gap', function () {
+      var s = base({ planned_hires: 150, recruiting_time_percentage: 100, volume_hires: 20, standard_hires: 12, complex_hires: 10 });
+      eq(C.defaultAllocation(s), { internal: 0, rpo: 32, agency: 10 });
+      eq(C.defaultAllocation(base({ planned_hires: 50 })), { internal: 0, rpo: 0, agency: 0 });
+    });
+
+    /* §29 */
+    test('Payload : toutes les variables du cahier des charges', function () {
+      var keys = ['planned_hires', 'turnover_included', 'turnover_replacement_hires', 'additional_turnover_hires', 'total_hiring_need', 'period_months', 'future_recruitment_volume',
+        'internal_recruiters', 'hires_per_recruiter_month', 'recruiting_time_percentage', 'internal_capacity', 'capacity_gap', 'capacity_coverage_percentage',
+        'volume_hires', 'standard_hires', 'complex_hires', 'strategic_hires',
+        'rpo_daily_rate', 'rpo_days_volume', 'rpo_days_standard', 'rpo_days_complex', 'rpo_days', 'rpo_cost',
+        'average_salary', 'agency_fee_percentage', 'agency_hires', 'agency_cost',
+        'internal_recruiter_salary', 'employer_cost_multiplier', 'annual_employer_cost', 'additional_fte', 'internal_cost_period',
+        'internal_mix_hires', 'rpo_mix_hires', 'agency_mix_hires', 'total_allocation_cost', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content'];
+      var p = C.buildPayload(base({ planned_hires: 150, recruiting_time_percentage: 100, volume_hires: 20, standard_hires: 12, complex_hires: 10 }), H, { internal: 0, rpo: 39, agency: 3 }, CFG, { utm_source: 'linkedin', utm_medium: 'organic', utm_campaign: 'x', utm_content: '' });
+      keys.forEach(function (k) { if (!(k in p)) throw new Error('clé manquante : ' + k); });
+      eq(p.capacity_gap, 42); eq(p.rpo_days, 20 * 4 + 12 * 6 + 10 * 10);
+    });
+
+    var out = document.getElementById('out'), ko = 0;
+    results.forEach(function (r) {
+      var li = document.createElement('li');
+      li.className = r[1] ? 'ok' : 'ko';
+      li.textContent = (r[1] ? '✓ ' : '✗ ') + r[0] + (r[2] ? ' — ' + r[2] : '');
+      out.appendChild(li); if (!r[1]) ko++;
+    });
+    document.getElementById('summary').textContent = (results.length - ko) + ' / ' + results.length + ' tests au vert';
+    document.getElementById('summary').className = ko ? 'ko' : 'ok';
+    window.__testResult = { total: results.length, failed: ko };
+  </script>
+</body>
+</html>

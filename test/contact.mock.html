@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Mock /client-contact — test du passage de contexte</title>
+  <style>body{font:15px/1.5 system-ui;margin:24px;max-width:640px} label{display:block;margin:12px 0 4px;font-weight:600} input,textarea{width:100%;padding:8px;font:inherit} textarea{height:120px}</style>
+</head>
+<body>
+  <h1>Mock du formulaire /client-contact</h1>
+  <p>Reproduit la structure réelle (id <code>clientContact</code>, champs <code>field</code>, <code>email</code>, <code>Phone</code>, <code>Company</code>, <code>Needs</code>, utm_*).</p>
+  <form id="clientContact" data-name="Email Form" onsubmit="return false">
+    <label for="f1">Nom</label><input id="f1" name="field" required>
+    <label for="f2">Email</label><input id="f2" type="email" name="email" required>
+    <label for="f3">Téléphone</label><input id="f3" type="tel" name="Phone" required>
+    <label for="f4">Entreprise</label><input id="f4" name="Company" required>
+    <label for="f5">Votre besoin</label><textarea id="f5" name="Needs" required></textarea>
+    <input type="text" name="utm_source" hidden>
+    <input type="text" name="utm_medium" hidden>
+    <input type="text" name="utm_campaign" hidden>
+    <input type="hidden" name="user_path">
+    <p><button type="submit">Envoyer</button></p>
+  </form>
+  <h2>Champs cachés ajoutés</h2>
+  <pre id="out"></pre>
+  <script src="../src/config.js"></script>
+  <script src="../src/client-contact.js"></script>
+  <script>
+    var f = document.getElementById('clientContact');
+    document.getElementById('out').textContent =
+      [...f.querySelectorAll('input[type="hidden"]')].map(function (i) { return i.name + ' = ' + i.value; }).join('\n') || '(aucun contexte trouvé)';
+  </script>
+</body>
+</html>

@@ -170,30 +170,12 @@
     return next;
   }
 
-  /* ---------- §27 Exemple d'allocation à explorer ---------- */
-  function exampleAllocation(s, cfg) {
+  /* ---------- Allocation de départ (modifiable par l'utilisateur) ----------
+   * Le cabinet prend les recrutements complexes, le reste part en RPO. */
+  function defaultAllocation(s) {
     var gap = computeCapacity(s).capacity_gap;
-    var mix = { internal: 0, rpo: 0, agency: 0 };
-    if (gap <= 0) return mix;
-
-    mix.agency = Math.min(gap, Math.min(pos(s.strategic_hires), pos(s.complex_hires)));
-    var remaining = gap - mix.agency;
-    var perFte = capacityPerFte(s);
-
-    switch (s.future_recruitment_volume) {
-      case 'durable':
-        if (perFte > 0 && remaining / perFte >= cfg.example_allocation.durable_min_fte) mix.internal = remaining;
-        break;
-      case 'turnover':
-      case 'incertain':
-        // Capacité interne par ETP entiers ; le surplus en renfort flexible.
-        if (perFte > 0) mix.internal = Math.min(remaining, Math.floor(Math.floor(remaining / perFte) * perFte + EPS));
-        break;
-      default: // 'pic' ou non renseigné : renfort temporaire
-        break;
-    }
-    mix.rpo = remaining - mix.internal;
-    return mix;
+    var agency = Math.min(gap, pos(s.complex_hires));
+    return { internal: 0, rpo: gap - agency, agency: agency };
   }
 
   /* ---------- §29 Données transmises (Zapier) ---------- */
@@ -276,7 +258,7 @@
     splitTypology: splitTypology,
     computeAllocation: computeAllocation,
     rebalance: rebalance,
-    exampleAllocation: exampleAllocation,
+    defaultAllocation: defaultAllocation,
     buildPayload: buildPayload
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -9,7 +9,7 @@
   'use strict';
 
   root.CRS_CONFIG = {
-    version: '1.0.0',
+    version: '1.2.0',
 
     /* ---------- Hypothèses économiques (modifiables par l'utilisateur) ---------- */
     hypotheses: {
@@ -33,7 +33,7 @@
 
     /* ---------- Bornes des champs ---------- */
     bounds: {
-      period_months_options: [3, 6, 12, 18, 24],
+      period_months_options: [3, 6, 12, 18, 24, 36, 48, 60],
       recruiting_time_percentage: { min: 25, max: 100, step: 5 },
       agency_fee_percentage: { min: 5, max: 40, step: 1 },
       employer_cost_multiplier: { min: 1, max: 2.5 }
@@ -42,12 +42,6 @@
     /* Jours ouvrés par mois : sert uniquement à traduire les jours RPO en durée équivalente. */
     working_days_per_month: 20,
 
-    /* ---------- Exemple d'allocation (jamais présenté comme une recommandation) ---------- */
-    example_allocation: {
-      // Besoin durable : le renfort interne n'est proposé que s'il représente au moins X ETP.
-      durable_min_fte: 0.5
-    },
-
     /* ---------- Liens ---------- */
     links: {
       meeting_url: 'https://www.leclubdesrh.fr/client-contact',
@@ -55,12 +49,17 @@
       rpo_page_url: 'https://www.leclubdesrh.fr/services/recrutement-externalise-rpo'
     },
 
-    /* ---------- Lead ---------- */
-    lead: {
-      // Sélecteur du formulaire Webflow natif (voir README). S'il est absent, un formulaire de secours est rendu.
-      webflow_form_selector: '[data-crs-lead-form] form',
-      // Optionnel : URL d'un « Catch Hook » Zapier. Laisser vide si Zapier écoute les soumissions Webflow.
-      webhook_url: ''
+    /* ---------- Remontée d'informations ---------- */
+    /* Enregistrement anonyme de chaque simulation : Catch Hook Zapier -> Airtable.
+       Aucune donnée identifiante n'y transite. Laisser vide pour désactiver. */
+    snapshot_webhook_url: '',
+
+    /* Passage du contexte de simulation vers la page de contact (même domaine). */
+    handoff: {
+      storage_key: 'crs_simulation',
+      contact_form_selector: '#clientContact',
+      message_field: 'Needs',      // textarea du formulaire, pré-rempli si vide
+      prefill_message: true
     },
 
     /* ---------- Tracking ---------- */

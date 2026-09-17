@@ -24,28 +24,12 @@
       tip: 'Profils rares, forte chasse, expertise spécifique ou marché candidat particulièrement tendu.' }
   ];
 
-  var FUTURE = [
-    { v: 'durable', label: 'Oui, le volume devrait rester durablement élevé' },
-    { v: 'turnover', label: 'Probablement, notamment grâce au turnover naturel' },
-    { v: 'incertain', label: 'Difficile à anticiper' },
-    { v: 'pic', label: 'Non, il s’agit principalement d’un pic temporaire' }
-  ];
-
-  var FUTURE_MSG = {
-    durable: 'Le renforcement de l’équipe interne peut être particulièrement pertinent lorsque ce niveau de recrutement est appelé à se maintenir sur plusieurs années.',
-    turnover: 'Même sans nouvelles créations de postes au même rythme, votre turnover peut maintenir un volume de recrutement suffisant pour justifier une capacité interne supplémentaire.',
-    incertain: 'La visibilité limitée sur les futurs volumes peut rendre intéressant un scénario combinant capacité interne et renfort flexible.',
-    pic: 'Une embauche permanente destinée uniquement à absorber ce pic créerait une capacité supplémentaire une fois le pic terminé. Un renfort temporaire peut donc être étudié.'
-  };
-
   var MIX_META = {
     internal: { label: 'Renfort interne', short: 'Interne' },
     rpo: { label: 'RPO freelance', short: 'RPO' },
     agency: { label: 'Cabinet / chasse de tête', short: 'Cabinet' }
   };
 
-  var CDI_NOTE = 'Un recrutement en CDI constitue un engagement au-delà de la période simulée. Cette option est particulièrement cohérente lorsque le niveau de recrutement doit se maintenir dans la durée ou lorsque le turnover naturel permet de maintenir une charge de recrutement suffisante.';
-  var TEMP_NOTE = 'Si la charge de recrutement diminue fortement après cette période, l’entreprise devra absorber cette capacité supplémentaire, la redéployer ou ajuster ses effectifs.';
   var DISCLAIMER = 'Les résultats de ce simulateur sont des estimations destinées à faciliter la réflexion sur le dimensionnement d’une équipe recrutement. La productivité et les coûts réels peuvent varier selon le secteur, la séniorité des profils recherchés, la tension du marché, les outils utilisés, l’organisation de l’équipe et le périmètre confié aux différents partenaires.';
 
   /* ================================================================
@@ -56,8 +40,7 @@
     turnover_replacement_hires: '', additional_turnover_hires: '',
     internal_recruiters: '', hires_per_recruiter_month: '',
     recruiting_time_percentage: CFG.defaults.recruiting_time_percentage,
-    volume_hires: 0, standard_hires: 0, complex_hires: 0, strategic_hires: 0,
-    future_recruitment_volume: ''
+    volume_hires: 0, standard_hires: 0, complex_hires: 0
   };
   var H = {};
   Object.keys(CFG.hypotheses).forEach(function (k) { H[k] = CFG.hypotheses[k] === null ? '' : CFG.hypotheses[k]; });
@@ -66,6 +49,7 @@
   var mixTouched = false;
   var step = 1;
   var unitMode = false;      // pas de gap : comparaison des coûts unitaires
+  var simulationId = '';    // identifiant anonyme de la simulation (relie l'enregistrement et le formulaire de contact)
   var rootEl = null;
   var fired = {};
   var UTM = {};
@@ -144,7 +128,7 @@
     o = o || {};
     return '<div class="crs-field">' +
       '<span class="crs-label" id="crs-lbl-' + name + '">' + label + (o.tip ? tip(o.tip) : '') + '</span>' +
-      '<div class="crs-seg" role="radiogroup" aria-labelledby="crs-lbl-' + name + '">' +
+      '<div class="crs-seg' + (o.cls ? ' ' + o.cls : '') + '" role="radiogroup" aria-labelledby="crs-lbl-' + name + '">' +
         options.map(function (op) {
           return '<button type="button" role="radio" aria-checked="false" data-choice="' + name + '" data-value="' + op.v + '">' + op.label + '</button>';
         }).join('') +
@@ -202,7 +186,7 @@
       '<header class="crs-step-head"><span class="crs-kicker">Étape 1 sur 4</span><h2 class="crs-h2" tabindex="-1">Votre plan de recrutement</h2></header>' +
       '<div class="crs-grid-2">' +
         field('S', 'planned_hires', 'Recrutements prévus dans votre plan', { int: true, suffix: 'recrutements', placeholder: '80' }) +
-        segmented('period_months', 'Sur quelle période ?', periodOpts) +
+        segmented('period_months', 'Sur quelle période ?', periodOpts, { cls: 'crs-seg--grid4' }) +
       '</div>' +
       segmented('turnover_included', 'Votre plan inclut-il déjà les remplacements liés au turnover ?',
         [{ v: 'oui', label: 'Oui' }, { v: 'non', label: 'Non' }, { v: 'partiel', label: 'Partiellement' }],
@@ -219,9 +203,9 @@
     var s2 = '<section class="crs-step" data-step="2">' +
       '<header class="crs-step-head"><span class="crs-kicker">Étape 2 sur 4</span><h2 class="crs-h2" tabindex="-1">Capacité de votre équipe interne</h2></header>' +
       '<div class="crs-grid-2">' +
-        field('S', 'internal_recruiters', 'Recruteurs internes sur ce plan', { decimal: true, suffix: 'recruteurs', placeholder: '3',
+        field('S', 'internal_recruiters', 'Recruteurs internes sur ce hiring plan', { decimal: true, suffix: 'recruteurs', placeholder: '3',
           tip: 'Vous pouvez saisir des équivalents temps plein, par exemple 2,5.' }) +
-        field('S', 'hires_per_recruiter_month', 'Recrutements finalisés par recruteur', { decimal: true, suffix: '/ mois', placeholder: '3',
+        field('S', 'hires_per_recruiter_month', 'Recrutements finalisés / recruteur à temps plein', { decimal: true, suffix: '/ mois', placeholder: '3',
           tip: 'Utilisez idéalement la moyenne constatée sur vos 6 à 12 derniers mois. Cette donnée permet d’adapter la simulation à votre secteur et à la complexité habituelle de vos recrutements.' }) +
       '</div>' +
       slider('S', 'recruiting_time_percentage', 'Part du temps réellement consacrée au recrutement', CFG.bounds.recruiting_time_percentage, '%',
@@ -245,18 +229,6 @@
         '<div class="crs-counter" data-counter><span class="crs-counter-num"><strong data-out="typo_sum"></strong> / <span data-out="gap_num"></span></span> recrutements répartis' +
         '<span class="crs-counter-track"><span class="crs-counter-fill" data-counter-fill></span></span></div>' +
         '<div class="crs-typo">' + typoRows + '</div>' +
-        '<div data-if="has_complex" class="crs-reveal crs-strategic">' +
-          '<div class="crs-typo-text"><div class="crs-typo-label">Parmi ces recrutements complexes, combien sont particulièrement stratégiques, urgents ou confidentiels ?' +
-          tip('Cette donnée permet d’identifier les recrutements sur lesquels le recours à un cabinet / chasseur de tête peut être étudié.') + '</div>' +
-          '<div class="crs-typo-desc">Maximum : <span data-out="complex_num"></span></div></div>' +
-          '<div class="crs-typo-ctrl">' + stepper('strategic_hires', 'Recrutements stratégiques') + '</div>' +
-        '</div>' +
-        '<div class="crs-field"><span class="crs-label" id="crs-lbl-future">Après cette période, pensez-vous conserver un volume de recrutement similaire ?</span>' +
-        '<div class="crs-options" role="radiogroup" aria-labelledby="crs-lbl-future">' +
-          FUTURE.map(function (f) {
-            return '<button type="button" role="radio" aria-checked="false" class="crs-option" data-choice="future_recruitment_volume" data-value="' + f.v + '"><span class="crs-radio"></span>' + f.label + '</button>';
-          }).join('') +
-        '</div></div>' +
         actions(3, 'Lancer la simulation') +
       '</div>' +
       '<div data-if="no_gap" class="crs-nogap">' +
@@ -271,13 +243,14 @@
     '</section>';
 
     var hypRpo = '<details class="crs-details"><summary>Modifier les hypothèses RPO</summary>' +
-      '<p class="crs-help">Estimations de simulation, et non standards universels. Adaptez-les à vos métiers.</p>' +
+      '<p class="crs-help">Estimations de simulation, adaptez-les à vos métiers.</p>' +
       '<div class="crs-grid-4">' +
         field('H', 'rpo_daily_rate', 'TJM RPO', { suffix: '€ HT / j', int: true }) +
         field('H', 'rpo_days_volume', 'Volume', { suffix: 'j / recr.', decimal: true }) +
         field('H', 'rpo_days_standard', 'Standard', { suffix: 'j / recr.', decimal: true }) +
         field('H', 'rpo_days_complex', 'Complexe', { suffix: 'j / recr.', decimal: true }) +
-      '</div></details>';
+      '</div>' +
+      '<div data-html="rpo_note"></div></details>';
 
     var mixRows = C.MIX_KEYS.map(function (k) {
       return '<div class="crs-mix-row">' +
@@ -303,12 +276,12 @@
           '<div class="crs-hero-gap"><span>Capacité supplémentaire nécessaire</span><strong data-out="gap_hero_txt"></strong></div>' +
         '</div>' +
         '<div data-html="hero_bar"></div>' +
-        '<div class="crs-hero-foot">Le Club des RH · Simulateur de capacité recrutement</div>' +
       '</div>' +
 
+      '<div class="crs-results-body">' +
       /* Hypothèses de coût */
       '<div class="crs-block">' +
-        '<div class="crs-block-head"><h3 class="crs-h3">Vos hypothèses de coût</h3><p class="crs-help">Visibles et modifiables à tout moment. Les résultats se mettent à jour instantanément.</p></div>' +
+        '<div class="crs-block-head"><h3 class="crs-h3">Vos hypothèses de coût<span data-if="has_gap"> pour couvrir vos <span data-out="gap_txt"></span> supplémentaires à absorber</span></h3><p class="crs-help">Visibles et modifiables à tout moment.</p></div>' +
         '<div class="crs-grid-2 crs-hyp">' +
           '<div class="crs-hyp-group"><div class="crs-hyp-title"><span class="crs-dot crs-dot--internal"></span>Renfort interne</div>' +
             field('H', 'internal_recruiter_salary', 'Salaire brut annuel moyen d’un recruteur', { int: true, suffix: '€ brut / an', placeholder: '50 000' }) +
@@ -328,13 +301,11 @@
           '<div class="crs-block-head"><h3 class="crs-h3">Trois façons de couvrir <span data-out="gap_txt"></span></h3>' +
           '<p class="crs-help">Coût estimé si l’intégralité du besoin supplémentaire était confiée à chaque solution. Ces options peuvent cohabiter : simulez votre allocation plus bas.</p></div>' +
           '<div class="crs-cards" data-html="cards"></div>' +
-          '<div data-html="future_msg"></div>' +
         '</div>' +
 
         '<div class="crs-block crs-mix">' +
           '<div class="crs-block-head"><h3 class="crs-h3">Simulez l’allocation de votre besoin de renfort</h3>' +
           '<p class="crs-help">Répartissez les recrutements que votre équipe actuelle ne peut pas absorber entre trois solutions.</p></div>' +
-          '<div class="crs-example" data-html="example"></div>' +
           '<div class="crs-mix-grid">' +
             '<div class="crs-mix-rows">' + mixRows +
               '<div class="crs-mix-sum"><span data-out="mix_sum"></span> / <span data-out="gap_num"></span> recrutements alloués</div>' +
@@ -344,15 +315,16 @@
               '<strong class="crs-budget-num" data-out="budget_total"></strong>' +
               '<div data-html="mix_bar"></div>' +
               '<ul class="crs-budget-list" data-html="budget_list"></ul>' +
-              '<p class="crs-budget-note">Hypothèse de ventilation : le cabinet prend en priorité les recrutements les plus complexes ; les autres sont répartis entre RPO et interne au prorata de votre typologie.</p>' +
             '</div>' +
           '</div>' +
+          '<div class="crs-callout crs-callout--inline"><span class="crs-callout-lbl">Hypothèse de ventilation</span>' +
+            '<p>Le cabinet prend en priorité les recrutements les plus complexes / stratégiques ; les autres sont répartis entre RPO et interne au prorata de votre typologie.</p></div>' +
         '</div>' +
 
         '<div class="crs-cta">' +
           '<div><h3 class="crs-h3">Besoin de renforcer votre équipe recrutement ?</h3>' +
           '<p>Le Club des RH vous permet d’accéder rapidement à des RPO freelances qualifiés et disponibles pour absorber un pic de recrutement ou renforcer temporairement votre équipe Talent Acquisition.</p>' +
-          '<p data-if="has_strategic">Nous pouvons également vous mettre en relation avec un chasseur de tête spécialisé pour vos recrutements les plus stratégiques.</p></div>' +
+          '<p data-if="has_complex">Nous pouvons également vous mettre en relation avec un chasseur de tête spécialisé pour vos recrutements les plus stratégiques.</p></div>' +
           '<a class="crs-btn crs-btn--light" data-track="meeting" href="' + esc(CFG.links.meeting_url) + '">Prendre rendez-vous<span aria-hidden="true">→</span></a>' +
         '</div>' +
       '</div>' +
@@ -363,14 +335,9 @@
         '<div class="crs-cards" data-html="unit_cards"></div>' +
       '</div>' +
 
-      '<div class="crs-block crs-lead-block">' +
-        '<div class="crs-block-head"><h3 class="crs-h3">Recevez votre simulation par email</h3>' +
-        '<p class="crs-help">Recevez le détail de votre simulation et conservez les hypothèses utilisées.</p></div>' +
-        '<div data-lead-slot></div>' +
       '</div>' +
 
       '<div class="crs-foot">' +
-        '<details class="crs-details"><summary>Hypothèses utilisées</summary><dl class="crs-recap" data-html="recap"></dl></details>' +
         '<p class="crs-disclaimer">' + DISCLAIMER + '</p>' +
         '<div class="crs-foot-actions"><button type="button" class="crs-btn crs-btn--ghost" data-action="prev">Retour</button>' +
         '<button type="button" class="crs-btn crs-btn--ghost" data-action="restart">Tester un autre scénario</button></div>' +
@@ -411,8 +378,6 @@
     var diff = cap.capacity_gap - C.typologyTotal(C.typology(S));
     if (diff > 0) return 'Encore ' + hiresTxt(diff) + ' à répartir';
     if (diff < 0) return hiresTxt(-diff) + ' en trop';
-    if (C.num(S.strategic_hires) > C.num(S.complex_hires)) return 'Stratégiques : maximum ' + NF0.format(C.num(S.complex_hires));
-    if (!S.future_recruitment_volume) return 'Indiquez la pérennité du besoin';
     return '';
   }
   function reachable(n) {
@@ -449,10 +414,7 @@
   }
 
   function fteTxt(fte) {
-    if (!isNum(fte)) return '—';
-    if (fte < 0.75) return '≈ ' + NF2.format(fte) + ' ETP';
-    var r = Math.round(fte);
-    return '≈ ' + r + ' ' + plural(r, 'recruteur supplémentaire', 'recruteurs supplémentaires');
+    return isNum(fte) ? '≈ ' + NF1.format(fte) + ' ETP' : '—';
   }
 
   function missing(id, label) {
@@ -478,20 +440,17 @@
     var ca = C.computeAgency(gap, H);
     var hSal = C.num(H.internal_recruiter_salary), hMul = C.num(H.employer_cost_multiplier), aSal = C.num(H.average_salary);
 
-    var internalNotes = [CDI_NOTE];
-    if (S.future_recruitment_volume === 'pic') internalNotes.push(TEMP_NOTE);
-
     var internal = card('internal',
       eur(ci.cost) || missing(hSal === null ? 'internal_recruiter_salary' : 'employer_cost_multiplier', 'Renseignez salaire et coefficient'),
       'coût employeur estimé sur ' + months + ' mois',
       [
-        row('ETP supplémentaires', fteTxt(ci.additional_fte) + (isNum(ci.additional_fte) && ci.additional_fte >= 0.75 ? ' <small>(' + NF2.format(ci.additional_fte) + ' ETP)</small>' : '')),
+        row('ETP supplémentaires', fteTxt(ci.additional_fte)),
         row('Salaire brut annuel', hSal === null ? '—' : eur(hSal)),
         row('Coefficient employeur', hMul === null ? '—' : NF2.format(hMul)),
         row('Coût par recrutement', eur(ci.cost_per_hire) || '—'),
         row('Durée simulée', months + ' mois')
       ],
-      'Pertinent lorsque le besoin de recrutement est récurrent et durable.', internalNotes);
+      'Pertinent lorsque le besoin de recrutement est récurrent et durable.');
 
     var rpo = card('rpo', eur(cr.cost, true), 'coût total estimé',
       [
@@ -532,39 +491,6 @@
       card('agency', eur(agencyUnit, true) || missing('average_salary', 'Renseignez le salaire moyen'), 'par recrutement',
         [row('Salaire moyen', C.num(H.average_salary) === null ? '—' : eur(C.num(H.average_salary))), row('Honoraires moyens', NF1.format(C.num(H.agency_fee_percentage)) + ' %')],
         'Particulièrement adapté à certaines recherches pénuriques, stratégiques, urgentes ou confidentielles.');
-  }
-
-  function renderExample(cap, ex) {
-    var items = [];
-    if (ex.rpo > 0) items.push('<li><strong>RPO freelance · ' + hiresTxt(ex.rpo) + '</strong> → absorber une partie du volume temporaire que l’équipe actuelle ne peut pas prendre en charge.</li>');
-    if (ex.agency > 0) items.push('<li><strong>Cabinet / chasse de tête · ' + hiresTxt(ex.agency) + '</strong> → isoler certains recrutements particulièrement pénuriques, stratégiques, urgents ou confidentiels.</li>');
-    if (ex.internal > 0 || ['durable', 'turnover', 'incertain'].indexOf(S.future_recruitment_volume) >= 0) {
-      items.push('<li><strong>Renfort interne' + (ex.internal > 0 ? ' · ' + hiresTxt(ex.internal) : '') + '</strong> → à étudier si ce niveau de recrutement doit se maintenir dans la durée ou si votre turnover génère suffisamment de recrutements récurrents.</li>');
-    }
-    return '<div class="crs-example-head"><span class="crs-pill">Exemple d’allocation à explorer</span>' +
-      (mixTouched ? '<button type="button" class="crs-link" data-action="example">Revenir à l’exemple</button>' : '') + '</div>' +
-      '<p>Votre équipe actuelle peut absorber <strong>' + NF0.format(cap.internal_capacity) + '</strong> recrutements sur les <strong>' + NF0.format(cap.total_hiring_need) +
-      '</strong> estimés. Il reste donc <strong>' + hiresTxt(cap.capacity_gap) + '</strong> à couvrir. Au regard des informations renseignées, vous pourriez notamment étudier l’allocation suivante :</p>' +
-      '<ul>' + items.join('') + '</ul>' +
-      '<p class="crs-help">Vous restez libre de modifier entièrement cette allocation.</p>';
-  }
-
-  function renderRecap() {
-    var items = [
-      ['Période simulée', NF0.format(C.num(S.period_months)) + ' mois'],
-      ['Productivité', NF2.format(C.num(S.hires_per_recruiter_month) || 0) + ' recrutements / recruteur / mois'],
-      ['Temps consacré au recrutement', NF0.format(C.num(S.recruiting_time_percentage)) + ' %'],
-      ['TJM RPO', eur(C.num(H.rpo_daily_rate), true)],
-      ['Charge RPO', NF1.format(C.num(H.rpo_days_volume)) + ' j (volume) · ' + NF1.format(C.num(H.rpo_days_standard)) + ' j (standard) · ' + NF1.format(C.num(H.rpo_days_complex)) + ' j (complexe)'],
-      ['Équivalence temps plein RPO', CFG.working_days_per_month + ' jours ouvrés / mois'],
-      ['Salaire moyen des profils (cabinet)', eur(C.num(H.average_salary)) || 'non renseigné'],
-      ['Honoraires cabinet', NF1.format(C.num(H.agency_fee_percentage)) + ' % du salaire brut annuel'],
-      ['Salaire brut recruteur interne', eur(C.num(H.internal_recruiter_salary)) || 'non renseigné'],
-      ['Coefficient coût employeur', C.num(H.employer_cost_multiplier) === null ? 'non renseigné' : NF2.format(C.num(H.employer_cost_multiplier))],
-      ['Capacité interne', 'recruteurs × productivité × période × temps consacré, arrondie à l’entier inférieur'],
-      ['Coût d’un CDI', 'aucun coût de sortie n’est intégré à la simulation']
-    ];
-    return items.map(function (i) { return row(i[0], i[1]); }).join('');
   }
 
   function syncInputs() {
@@ -625,7 +551,6 @@
     setIf('has_gap', cap.has_gap);
     setIf('no_gap', liveReady && !cap.has_gap);
     setIf('has_complex', C.num(S.complex_hires) > 0);
-    setIf('has_strategic', C.num(S.strategic_hires) > 0);
     setIf('typo_under', typoSum < cap.capacity_gap);
 
     /* Panneau direct */
@@ -652,7 +577,6 @@
     setOut('gap_txt', hiresTxt(cap.capacity_gap));
     setOut('gap_num', NF0.format(cap.capacity_gap));
     setOut('typo_sum', NF0.format(typoSum));
-    setOut('complex_num', NF0.format(C.num(S.complex_hires) || 0));
     var counter = rootEl.querySelector('[data-counter]');
     if (counter) {
       counter.setAttribute('data-state', typoSum === cap.capacity_gap ? 'ok' : typoSum > cap.capacity_gap ? 'over' : 'under');
@@ -667,8 +591,7 @@
 
     /* Étape 4 */
     if (step === 4) {
-      var ex = C.exampleAllocation(S, CFG);
-      if (!mixTouched || MIX.internal + MIX.rpo + MIX.agency !== cap.capacity_gap) { MIX = ex; mixTouched = false; }
+      if (!mixTouched || MIX.internal + MIX.rpo + MIX.agency !== cap.capacity_gap) { MIX = C.defaultAllocation(S); mixTouched = false; }
 
       setOut('period_txt', months + ' mois');
       setOut('coverage_txt', cap.capacity_coverage_percentage + ' %');
@@ -679,13 +602,13 @@
       setOut('gap_hero_txt', NF0.format(cap.capacity_gap));
       setHtml('hero_bar', capacityBar(cap));
       setOut('agency_fee_percentage_txt', NF1.format(C.num(H.agency_fee_percentage)) + ' %');
-      setHtml('recap', renderRecap());
+
+      setHtml('rpo_note', '<div class="crs-callout"><span class="crs-callout-lbl">Explications</span><p>On estime qu’un recruteur RPO a besoin de <strong>' +
+        NF1.format(C.num(H.rpo_days_volume)) + ' jours</strong> par recrutement volume, <strong>' + NF1.format(C.num(H.rpo_days_standard)) + ' jours</strong> par recrutement standard et <strong>' +
+        NF1.format(C.num(H.rpo_days_complex)) + ' jours</strong> par recrutement complexe, facturés au TJM de ' + eur(C.num(H.rpo_daily_rate), true) + '.</p></div>');
 
       if (cap.has_gap) {
         setHtml('cards', renderCards(cap));
-        var fm = FUTURE_MSG[S.future_recruitment_volume];
-        setHtml('future_msg', fm ? '<div class="crs-callout"><span class="crs-callout-lbl">Pérennité du besoin</span><p>' + fm + '</p></div>' : '');
-        setHtml('example', renderExample(cap, ex));
 
         var alloc = C.computeAllocation(S, H, MIX, CFG);
         syncMix(cap.capacity_gap);
@@ -700,7 +623,7 @@
         }), 'Allocation du besoin de renfort'));
         setHtml('budget_list', C.MIX_KEYS.map(function (k) {
           var cost = alloc[k + '_cost'];
-          var extra = k === 'internal' && MIX.internal > 0 && isNum(alloc.internal.additional_fte) ? ' <small>' + NF2.format(alloc.internal.additional_fte) + ' ETP</small>'
+          var extra = k === 'internal' && MIX.internal > 0 && isNum(alloc.internal.additional_fte) ? ' <small>' + NF1.format(alloc.internal.additional_fte) + ' ETP</small>'
             : k === 'rpo' && MIX.rpo > 0 ? ' <small>' + NF1.format(alloc.rpo.days) + ' j</small>' : '';
           return '<li><span><i class="crs-dot crs-dot--' + k + '"></i>' + MIX_META[k].label + extra + '</span><strong>' +
             (MIX[k] === 0 ? '0 €' : (eur(cost, k !== 'internal') || '—')) + '</strong></li>';
@@ -712,106 +635,66 @@
       var costsReady = C.annualEmployerCost(H) !== null && C.agencyCostPerHire(H) !== null;
       if (costsReady) {
         track('simulation_completed', { total_allocation_cost: C.computeAllocation(S, H, MIX, CFG).total_allocation_cost, mode: cap.has_gap ? 'gap' : 'no_gap' }, true);
+        sendSnapshot();
       }
-      syncLeadFields();
+      saveHandoff();
     }
 
     syncInputs();
   }
 
   /* ================================================================
-   * Lead capture
+   * Remontée d'informations
+   *  1. Enregistrement anonyme de chaque simulation (webhook -> Airtable).
+   *  2. Passage du contexte au formulaire de contact via sessionStorage.
    * ================================================================ */
-  var leadForm = null, nativeForm = false;
-
-  function fallbackForm() {
-    var f = doc.createElement('form');
-    f.className = 'crs-form';
-    f.setAttribute('novalidate', '');
-    f.innerHTML =
-      '<div class="crs-grid-2">' +
-        '<div class="crs-field"><label class="crs-label" for="crs-firstname">Prénom</label><div class="crs-input"><input id="crs-firstname" name="firstname" autocomplete="given-name" required></div></div>' +
-        '<div class="crs-field"><label class="crs-label" for="crs-lastname">Nom</label><div class="crs-input"><input id="crs-lastname" name="lastname" autocomplete="family-name" required></div></div>' +
-        '<div class="crs-field"><label class="crs-label" for="crs-email">Email professionnel</label><div class="crs-input"><input id="crs-email" name="email" type="email" autocomplete="email" required></div></div>' +
-        '<div class="crs-field"><label class="crs-label" for="crs-company">Entreprise</label><div class="crs-input"><input id="crs-company" name="company" autocomplete="organization" required></div></div>' +
-      '</div>' +
-      '<label class="crs-check"><input type="checkbox" name="marketing_consent" value="oui"><span>J’accepte de recevoir les ressources et actualités du Club des RH (désinscription possible à tout moment).</span></label>' +
-      '<p class="crs-legal">Vos informations sont utilisées par Le Club des RH pour vous envoyer votre simulation et, le cas échéant, vous recontacter à propos de votre besoin. ' +
-        '<a href="' + esc(CFG.links.privacy_url) + '" target="_blank" rel="noopener">Politique de confidentialité</a>.</p>' +
-      '<div class="crs-form-actions"><button type="submit" class="crs-btn">Recevoir ma simulation</button><span class="crs-form-error" role="alert"></span></div>' +
-      '<div class="crs-form-success" hidden role="status">Merci ! Votre simulation est en route vers votre boîte mail.</div>';
-    return f;
+  function newSimulationId() {
+    return 'sim_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
   }
 
-  function setupLead() {
-    var slot = rootEl.querySelector('[data-lead-slot]');
-    var native = doc.querySelector(CFG.lead.webflow_form_selector);
-    if (native) {
-      var wrapper = native.closest('[data-crs-lead-form]') || native;
-      slot.appendChild(wrapper);
-      wrapper.style.display = 'block';
-      leadForm = native; nativeForm = true;
-    } else {
-      leadForm = fallbackForm();
-      slot.appendChild(leadForm);
-    }
-
-    leadForm.addEventListener('submit', function (e) {
-      syncLeadFields();
-      if (!nativeForm) {
-        e.preventDefault();
-        var err = leadForm.querySelector('.crs-form-error');
-        if (!leadForm.checkValidity()) { err.textContent = 'Merci de compléter tous les champs avec un email valide.'; return; }
-        err.textContent = '';
-      }
-      var payload = collectPayload();
-      track('email_submitted', { total_allocation_cost: payload.total_allocation_cost });
-      if (CFG.lead.webhook_url) {
-        try {
-          root.fetch(CFG.lead.webhook_url, { method: 'POST', mode: 'no-cors', keepalive: true, body: new URLSearchParams(payload) });
-        } catch (x) { /* l'envoi Webflow reste la source principale */ }
-      }
-      if (!nativeForm) {
-        leadForm.querySelector('.crs-form-success').hidden = false;
-        leadForm.querySelector('.crs-form-actions').hidden = true;
-        if (!CFG.lead.webhook_url && root.console) console.info('[CRS] Données du lead (aucun webhook configuré) :', payload);
-      }
-    }, true);
-  }
-
-  function resetLead() {
-    if (nativeForm || !leadForm) return;
-    leadForm.querySelector('.crs-form-success').hidden = true;
-    leadForm.querySelector('.crs-form-actions').hidden = false;
-  }
-
-  function collectPayload() {
-    var extra = { page_url: root.location.href.split('#')[0] };
+  function simulationData() {
+    var extra = { simulation_id: simulationId, page_url: root.location.href.split('#')[0] };
     CFG.utm_keys.forEach(function (k) { extra[k] = UTM[k]; });
-    var p = C.buildPayload(S, H, MIX, CFG, extra);
-    if (leadForm) {
-      ['firstname', 'lastname', 'email', 'company', 'marketing_consent'].forEach(function (k) {
-        var el = leadForm.querySelector('[name="' + k + '"]');
-        if (el) p[k] = el.type === 'checkbox' ? (el.checked ? 'oui' : 'non') : el.value.trim();
+    return C.buildPayload(S, H, MIX, CFG, extra);
+  }
+
+  /* Résumé lisible, repris dans le message du formulaire de contact. */
+  function summary() {
+    var cap = C.computeCapacity(S), typo = C.typology(S);
+    var txt = 'Simulation de capacité recrutement : besoin total de ' + NF0.format(cap.total_hiring_need) +
+      ' recrutements sur ' + NF0.format(C.num(S.period_months)) + ' mois, capacité interne estimée à ' + NF0.format(cap.internal_capacity) +
+      ' (' + cap.capacity_coverage_percentage + ' % de couverture).';
+    if (cap.has_gap) {
+      txt += ' Reste ' + NF0.format(cap.capacity_gap) + ' recrutements à absorber, dont ' + NF0.format(typo.complex) + ' complexes.';
+      var alloc = C.computeAllocation(S, H, MIX, CFG);
+      if (alloc.rpo.days > 0) txt += ' Scénario RPO simulé : ' + NF1.format(alloc.rpo.days) + ' jours.';
+    }
+    return txt;
+  }
+
+  /* 1. Enregistrement anonyme : aucune donnée identifiante n'est envoyée. */
+  function sendSnapshot() {
+    if (!CFG.snapshot_webhook_url) {
+      if (root.console) console.info('[CRS] Simulation (aucun webhook configuré) :', simulationData());
+      return;
+    }
+    try {
+      root.fetch(CFG.snapshot_webhook_url, {
+        method: 'POST', mode: 'no-cors', keepalive: true,
+        body: new URLSearchParams(simulationData())
       });
-    }
-    return p;
+    } catch (e) { /* l'analytics GA4 reste la source secondaire */ }
   }
 
-  function syncLeadFields() {
-    if (!leadForm) return;
-    var extra = { page_url: root.location.href.split('#')[0] };
-    CFG.utm_keys.forEach(function (k) { extra[k] = UTM[k]; });
-    var p = C.buildPayload(S, H, MIX, CFG, extra);
-    Object.keys(p).forEach(function (k) {
-      var el = leadForm.querySelector('input[type="hidden"][name="' + k + '"]');
-      if (!el) {
-        el = doc.createElement('input');
-        el.type = 'hidden'; el.name = k;
-        leadForm.appendChild(el);
-      }
-      el.value = String(p[k]);
-    });
+  /* 2. Contexte déposé pour la page de contact (même domaine). */
+  function saveHandoff() {
+    try {
+      root.sessionStorage.setItem(CFG.handoff.storage_key, JSON.stringify({
+        saved_at: new Date().toISOString(),
+        summary: summary(),
+        data: simulationData()
+      }));
+    } catch (e) { /* stockage indisponible : le formulaire reste utilisable sans contexte */ }
   }
 
   /* ================================================================
@@ -837,17 +720,11 @@
       } else {
         scope[name] = el.value.trim() === '' ? '' : scope[name];
       }
-      if (name === 'strategic_hires' || name === 'complex_hires') clampStrategic();
       update();
     } else {
       scope[name] = n === null ? el.value : n;
       update();
     }
-  }
-
-  function clampStrategic() {
-    var max = C.num(S.complex_hires) || 0;
-    if ((C.num(S.strategic_hires) || 0) > max) S.strategic_hires = max;
   }
 
   function bind() {
@@ -883,7 +760,7 @@
       var t = e.target.closest('[data-choice],[data-action],[data-track]');
       if (!t || !rootEl.contains(t)) return;
 
-      if (t.hasAttribute('data-track')) { track('meeting_cta_clicked', { strategic_hires: C.num(S.strategic_hires) || 0 }); return; }
+      if (t.hasAttribute('data-track')) { saveHandoff(); track('meeting_cta_clicked', { complex_hires: C.num(S.complex_hires) || 0, simulation_id: simulationId }); return; }
 
       track('calculator_started', null, true);
 
@@ -911,8 +788,6 @@
         case 'inc':
         case 'dec':
           S[target] = Math.max(0, (C.num(S[target]) || 0) + (a === 'inc' ? 1 : -1));
-          if (target === 'strategic_hires') S[target] = Math.min(S[target], C.num(S.complex_hires) || 0);
-          clampStrategic();
           update();
           break;
         case 'rest':
@@ -920,8 +795,7 @@
           if (restLeft > 0) { S[target] = (C.num(S[target]) || 0) + restLeft; update(); }
           break;
         case 'unit': unitMode = true; go(4); break;
-        case 'restart': unitMode = false; resetLead(); go(1); break;
-        case 'example': mixTouched = false; update(); break;
+        case 'restart': unitMode = false; go(1); break;
         case 'focus':
           var el = doc.getElementById(target);
           if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus({ preventScroll: true }); }
@@ -938,13 +812,16 @@
     if (!mount || mount.__crs) return;
     mount.__crs = true;
     readUtm();
+    try {
+      simulationId = root.sessionStorage.getItem('crs_simulation_id') || '';
+      if (!simulationId) { simulationId = newSimulationId(); root.sessionStorage.setItem('crs_simulation_id', simulationId); }
+    } catch (e) { simulationId = newSimulationId(); }
 
     rootEl = doc.createElement('div');
     rootEl.className = 'crs is-step-1';
     rootEl.innerHTML = template();
     mount.appendChild(rootEl);
 
-    setupLead();
     bind();
     update();
 

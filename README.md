@@ -65,6 +65,32 @@ Si la personne arrive directement sur la page, ou depuis un autre navigateur, le
 
 ---
 
+## 1 bis. État dans Webflow (déjà en place)
+
+Site **Le Club des RH** (`666c46feab6f482842f95982`).
+
+| Élément | État |
+|---|---|
+| Page **Calculateur RPO** (`6aac50c868d481afa809b161`) | Créée **en brouillon**, chemin `/calculateur-rpo`, dupliquée du template de page (navbar + footer) |
+| SEO | Title et description renseignés |
+| Contenu | Section « Simulateur » : H1, intro, et le point de montage `<div id="crs-simulator">` |
+| Code personnalisé de la page | `<head>` : la feuille de styles ; avant `</body>` : les 3 scripts, dans l'ordre |
+| Page **Client contact** (`6841574bb334785b523c3b2e`) | `client-contact.js` ajouté au pied de page, **après** le script multi-step existant |
+| GTM | Conteneur `GTM-KDMH79FM` déjà présent sur tout le site : les événements arrivent dans le `dataLayer` |
+
+Le chemin visé au cahier des charges était `/ressources/calculateur-rpo`, mais `ressources` est une **page**, pas un dossier : impossible d'y imbriquer une page sans restructurer. La page est donc à la racine.
+
+### Pour tester (rôle du web designer)
+Le code personnalisé Webflow **ne s'exécute pas dans l'aperçu du Designer** : il faut publier pour voir le simulateur fonctionner.
+1. Décocher « Brouillon » sur la page (Paramètres de la page).
+2. Publier **uniquement sur le sous-domaine `le-club-des-rh-2024.webflow.io`**, pas sur les domaines personnalisés.
+3. Tester `https://le-club-des-rh-2024.webflow.io/calculateur-rpo` : parcours complet, mobile, puis clic sur « Prendre rendez-vous » et vérification que le message du formulaire de contact est pré-rempli.
+4. Quand tout est bon, publier sur `leclubdesrh.fr`. ⚠️ Une publication complète envoie aussi les autres modifications du site en attente.
+
+La section conservée du template (« En recherche d'un consultant freelance RH ? »), les témoignages et la FAQ sont toujours sur la page : à garder ou supprimer selon le rendu voulu.
+
+---
+
 ## 2. Données transmises
 
 Tous les noms correspondent au §29 du cahier des charges. Précisions de périmètre :

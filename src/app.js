@@ -107,6 +107,17 @@
     }
   }
 
+  /* Le lien de RDV est configuré avec un domaine de référence (config.js), mais l'outil est
+   * embarqué sur plusieurs domaines (staging Webflow, production). On ne garde du config que le
+   * chemin, et on reconstruit l'URL avec le domaine réellement visité, pour ne jamais renvoyer
+   * quelqu'un testant sur le staging vers le site de production (ou inversement). */
+  function meetingUrl() {
+    try {
+      var u = new root.URL(CFG.links.meeting_url, root.location.origin);
+      return root.location.origin + u.pathname + u.search + u.hash;
+    } catch (e) { return CFG.links.meeting_url; }
+  }
+
   /* ================================================================
    * Composants HTML
    * ================================================================ */
@@ -115,7 +126,7 @@
     return '<div class="crs-field' + (o.cls ? ' ' + o.cls : '') + '">' +
       '<label class="crs-label" for="crs-' + name + '">' + label + (o.tip ? tip(o.tip) : '') + '</label>' +
       '<div class="crs-input">' +
-        '<input id="crs-' + name + '" type="text" inputmode="' + (o.decimal ? 'decimal' : 'numeric') + '" autocomplete="off"' +
+        '<input id="crs-' + name + '" type="number" min="0" step="' + (o.decimal ? 'any' : '1') + '" inputmode="' + (o.decimal ? 'decimal' : 'numeric') + '" autocomplete="off"' +
         ' data-scope="' + scope + '" data-field="' + name + '"' + (o.int ? ' data-int' : '') +
         ' placeholder="' + esc(o.placeholder || '') + '">' +
         (o.suffix ? '<span class="crs-suffix">' + o.suffix + '</span>' : '') +
@@ -148,7 +159,7 @@
   function stepper(name, label) {
     return '<div class="crs-stepper">' +
       '<button type="button" class="crs-stepper-btn" data-action="dec" data-target="' + name + '" aria-label="Retirer un recrutement">−</button>' +
-      '<input type="text" inputmode="numeric" autocomplete="off" aria-label="' + esc(label) + '" data-scope="S" data-field="' + name + '" data-int>' +
+      '<input type="number" min="0" step="1" inputmode="numeric" autocomplete="off" aria-label="' + esc(label) + '" data-scope="S" data-field="' + name + '" data-int>' +
       '<button type="button" class="crs-stepper-btn" data-action="inc" data-target="' + name + '" aria-label="Ajouter un recrutement">+</button>' +
     '</div>';
   }
@@ -204,7 +215,7 @@
       '<header class="crs-step-head"><span class="crs-kicker">Étape 2 sur 4</span><h2 class="crs-h2" tabindex="-1">Capacité de votre équipe interne</h2></header>' +
       '<div class="crs-grid-2">' +
         field('S', 'internal_recruiters', 'Recruteurs internes sur ce hiring plan', { decimal: true, suffix: 'recruteurs', placeholder: '3',
-          tip: 'Vous pouvez saisir des équivalents temps plein, par exemple 2,5.' }) +
+          tip: 'Vous pouvez saisir des équivalents temps plein, par exemple 2.5 (point, pas virgule).' }) +
         field('S', 'hires_per_recruiter_month', 'Recrutements finalisés / recruteur à temps plein', { decimal: true, suffix: '/ mois', placeholder: '3',
           tip: 'Utilisez idéalement la moyenne constatée sur vos 6 à 12 derniers mois. Cette donnée permet d’adapter la simulation à votre secteur et à la complexité habituelle de vos recrutements.' }) +
       '</div>' +
@@ -258,7 +269,7 @@
         '<span class="crs-mix-cost" data-out="mix_cost_' + k + '"></span></div>' +
         '<div class="crs-mix-ctrl">' +
           '<input type="range" class="crs-range crs-range--' + k + '" min="0" step="1" data-mix="' + k + '" aria-label="' + MIX_META[k].label + ' (recrutements)">' +
-          '<div class="crs-mix-num"><input type="text" inputmode="numeric" autocomplete="off" data-mix="' + k + '" aria-label="' + MIX_META[k].label + '"><span>recr.</span></div>' +
+          '<div class="crs-mix-num"><input type="number" min="0" step="1" inputmode="numeric" autocomplete="off" data-mix="' + k + '" aria-label="' + MIX_META[k].label + '"><span>recr.</span></div>' +
         '</div></div>';
     }).join('');
 
@@ -284,12 +295,12 @@
         '<div class="crs-block-head"><h3 class="crs-h3">Vos hypothèses de coût<span data-if="has_gap"> pour couvrir vos <span data-out="gap_txt"></span> supplémentaires à absorber</span></h3><p class="crs-help">Visibles et modifiables à tout moment.</p></div>' +
         '<div class="crs-grid-2 crs-hyp">' +
           '<div class="crs-hyp-group"><div class="crs-hyp-title"><span class="crs-dot crs-dot--internal"></span>Renfort interne</div>' +
-            field('H', 'internal_recruiter_salary', 'Salaire brut annuel moyen d’un recruteur', { int: true, suffix: '€ brut / an', placeholder: '50 000' }) +
-            field('H', 'employer_cost_multiplier', 'Coefficient salaire brut → coût employeur', { decimal: true, suffix: '×', placeholder: '1,45',
+            field('H', 'internal_recruiter_salary', 'Salaire brut annuel moyen d’un recruteur', { int: true, suffix: '€ brut / an', placeholder: '50000' }) +
+            field('H', 'employer_cost_multiplier', 'Coefficient salaire brut → coût employeur', { decimal: true, suffix: '×', placeholder: '1.45',
               tip: 'Renseignez le coefficient habituellement utilisé dans votre entreprise pour estimer le coût employeur total à partir du salaire brut annuel.' }) +
           '</div>' +
           '<div class="crs-hyp-group"><div class="crs-hyp-title"><span class="crs-dot crs-dot--agency"></span>Cabinet / chasse de tête</div>' +
-            field('H', 'average_salary', 'Salaire brut annuel moyen des profils concernés', { int: true, suffix: '€ brut / an', placeholder: '60 000' }) +
+            field('H', 'average_salary', 'Salaire brut annuel moyen des profils concernés', { int: true, suffix: '€ brut / an', placeholder: '60000' }) +
             slider('H', 'agency_fee_percentage', 'Honoraires moyens de vos cabinets', CFG.bounds.agency_fee_percentage, '%') +
           '</div>' +
         '</div>' +
@@ -325,7 +336,7 @@
           '<div><h3 class="crs-h3">Besoin de renforcer votre équipe recrutement ?</h3>' +
           '<p>Le Club des RH vous permet d’accéder rapidement à des RPO freelances qualifiés et disponibles pour absorber un pic de recrutement ou renforcer temporairement votre équipe Talent Acquisition.</p>' +
           '<p data-if="has_complex">Nous pouvons également vous mettre en relation avec un chasseur de tête spécialisé pour vos recrutements les plus stratégiques.</p></div>' +
-          '<a class="crs-btn crs-btn--light" data-track="meeting" href="' + esc(CFG.links.meeting_url) + '">Prendre rendez-vous<span aria-hidden="true">→</span></a>' +
+          '<a class="crs-btn crs-btn--light" data-track="meeting" href="' + esc(meetingUrl()) + '">Prendre rendez-vous<span aria-hidden="true">→</span></a>' +
         '</div>' +
       '</div>' +
 
@@ -499,6 +510,12 @@
       var v = scopeOf(el.getAttribute('data-scope'))[el.getAttribute('data-field')];
       var txt;
       if (el.type === 'range') txt = String(v === '' ? el.min : v);
+      else if (el.type === 'number') {
+        /* type="number" n'accepte que le point comme séparateur décimal, sans espaces :
+           on écrit la valeur brute, jamais le format français (NF2) qui la rendrait invalide. */
+        var nn = C.num(v);
+        txt = nn === null ? '' : String(nn);
+      }
       else { var n = C.num(v); txt = n === null ? (v === '' ? '' : String(v)) : NF2.format(n); }
       if (el.value !== txt) el.value = txt;
       if (el.type === 'range') el.style.setProperty('--p', ((C.num(el.value) - el.min) / (el.max - el.min) * 100) + '%');
@@ -679,10 +696,11 @@
       return;
     }
     try {
-      root.fetch(CFG.snapshot_webhook_url, {
-        method: 'POST', mode: 'no-cors', keepalive: true,
-        body: new URLSearchParams(simulationData())
-      });
+      var data = simulationData();
+      var body = new URLSearchParams(data);
+      /* payload_json : le même contenu en un seul champ, pour un relais sans mappage champ par champ. */
+      body.set('payload_json', JSON.stringify(data));
+      root.fetch(CFG.snapshot_webhook_url, { method: 'POST', mode: 'no-cors', keepalive: true, body: body });
     } catch (e) { /* l'analytics GA4 reste la source secondaire */ }
   }
 

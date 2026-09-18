@@ -9,7 +9,7 @@
   'use strict';
 
   root.CRS_CONFIG = {
-    version: '1.2.0',
+    version: '1.3.2',
 
     /* ---------- Hypothèses économiques (modifiables par l'utilisateur) ---------- */
     hypotheses: {
@@ -44,6 +44,9 @@
 
     /* ---------- Liens ---------- */
     links: {
+      /* Seul le chemin est utilisé pour le CTA « Prendre rendez-vous » : app.js reconstruit l'URL
+         avec le domaine réellement visité (staging Webflow ou production), pour ne jamais rediriger
+         vers le mauvais environnement. Le domaine ci-dessous ne sert que de valeur de repli. */
       meeting_url: 'https://www.leclubdesrh.fr/client-contact',
       privacy_url: 'https://www.leclubdesrh.fr/politique-de-confidentialite',
       rpo_page_url: 'https://www.leclubdesrh.fr/services/recrutement-externalise-rpo'
@@ -51,7 +54,9 @@
 
     /* ---------- Remontée d'informations ---------- */
     /* Enregistrement anonyme de chaque simulation : Catch Hook Zapier -> Airtable.
-       Aucune donnée identifiante n'y transite. Laisser vide pour désactiver. */
+       Aucune donnée identifiante n'y transite. Laisser vide pour désactiver.
+       Vide volontairement : sur leclubdesrh.fr, l'envoi est fait par le script en ligne placé
+       en pied de page Webflow. Renseigner les deux provoquerait un double envoi. */
     snapshot_webhook_url: '',
 
     /* Passage du contexte de simulation vers la page de contact (même domaine). */

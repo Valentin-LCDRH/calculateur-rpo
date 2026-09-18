@@ -109,6 +109,18 @@
 .crs-suffix { position: absolute; right: 16px; pointer-events: none; color: var(--crs-ink-3); font-size: 14px; font-weight: 500; white-space: nowrap; }
 .crs-input input[data-field] { padding-right: 120px; }
 
+/* Champs numériques : on masque les flèches natives, remplacées par le suffixe / le stepper / les
+   boutons +− déjà présents dans l'interface. */
+.crs-input input[type="number"],
+.crs-stepper input[type="number"],
+.crs-mix-num input[type="number"] { -moz-appearance: textfield; }
+.crs-input input[type="number"]::-webkit-outer-spin-button,
+.crs-input input[type="number"]::-webkit-inner-spin-button,
+.crs-stepper input[type="number"]::-webkit-outer-spin-button,
+.crs-stepper input[type="number"]::-webkit-inner-spin-button,
+.crs-mix-num input[type="number"]::-webkit-outer-spin-button,
+.crs-mix-num input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
 /* Segmenté */
 .crs-seg { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: var(--crs-violet-50); border-radius: 14px; }
 .crs-seg button {

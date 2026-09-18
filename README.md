@@ -22,7 +22,7 @@ Démo locale : `python3 -m http.server 8765` dans ce dossier, puis <http://127.0
 
 ### Héberger les 4 fichiers
 Webflow n'accepte pas l'upload de `.js`. Options, par ordre de préférence :
-1. **Dépôt GitHub public + jsDelivr** : `https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.2.0/src/app.js`
+1. **Dépôt GitHub public + jsDelivr** : `https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.3.2/src/app.js`
    (épingler une version/tag pour maîtriser le cache ; changer de tag à chaque mise à jour).
 2. Coller le contenu dans les *Custom code* de la page (vérifier la limite de caractères de votre plan Webflow).
 
@@ -36,14 +36,14 @@ Webflow n'accepte pas l'upload de `.js`. Options, par ordre de préférence :
   ```
 - **Page settings → Inside `<head>`** :
   ```html
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.2.0/src/simulateur.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.3.2/src/simulateur.css">
   <style>[data-crs-lead-form]{display:none}</style>
   ```
 - **Page settings → Before `</body>`** (ordre obligatoire) :
   ```html
-  <script src="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.2.0/src/config.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.2.0/src/calc.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.2.0/src/app.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.3.2/src/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.3.2/src/calc.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.3.2/src/app.js"></script>
   ```
 Le simulateur hérite de la police du site. Toutes les classes sont préfixées `crs-` : aucun conflit avec les styles Webflow.
 
@@ -58,36 +58,34 @@ Aucune coordonnée n'est demandée dans le simulateur. Deux mécanismes :
 
 Sur `/client-contact`, ajouter avant `</body>` :
 ```html
-<script src="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.2.0/src/config.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.2.0/src/client-contact.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.3.2/src/config.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Valentin-LCDRH/calculateur-rpo@v1.3.2/src/client-contact.js"></script>
 ```
 Si la personne arrive directement sur la page, ou depuis un autre navigateur, le formulaire fonctionne normalement, simplement sans contexte.
 
 ---
 
-## 1 bis. État dans Webflow (déjà en place)
+## 1 bis. État dans Webflow (fait)
 
 Site **Le Club des RH** (`666c46feab6f482842f95982`).
 
 | Élément | État |
 |---|---|
-| Page **Calculateur RPO** (`6aac50c868d481afa809b161`) | Créée **en brouillon**, chemin `/calculateur-rpo`, dupliquée du template de page (navbar + footer) |
+| Page **Calculateur RPO** (`6aac50c868d481afa809b161`) | Créée **en brouillon**, chemin `/calculateur-rpo` |
+| Contenu | Uniquement la section du simulateur (H1, intro, point de montage). Les blocs hérités du template — encart « En recherche d'un consultant freelance RH ? », témoignages, FAQ — ont été supprimés |
 | SEO | Title et description renseignés |
-| Contenu | Section « Simulateur » : H1, intro, et le point de montage `<div id="crs-simulator">` |
-| Code personnalisé de la page | `<head>` : la feuille de styles ; avant `</body>` : les 3 scripts, dans l'ordre |
-| Page **Client contact** (`6841574bb334785b523c3b2e`) | `client-contact.js` ajouté au pied de page, **après** le script multi-step existant |
-| GTM | Conteneur `GTM-KDMH79FM` déjà présent sur tout le site : les événements arrivent dans le `dataLayer` |
+| Code de la page | `<head>` : feuille de styles ; avant `</body>` : les 3 scripts + un script d'envoi de la simulation vers Zapier |
+| Page **Client contact** (`6841574bb334785b523c3b2e`) | `client-contact.js` ajouté après le script multi-step existant |
+| GTM | `GTM-KDMH79FM` déjà présent sur le site : les 8 événements arrivent dans le `dataLayer` |
 
-Le chemin visé au cahier des charges était `/ressources/calculateur-rpo`, mais `ressources` est une **page**, pas un dossier : impossible d'y imbriquer une page sans restructurer. La page est donc à la racine.
+Le chemin `/ressources/calculateur-rpo` n'est pas possible sans restructurer : `ressources` est une page, pas un dossier.
 
-### Pour tester (rôle du web designer)
-Le code personnalisé Webflow **ne s'exécute pas dans l'aperçu du Designer** : il faut publier pour voir le simulateur fonctionner.
-1. Décocher « Brouillon » sur la page (Paramètres de la page).
-2. Publier **uniquement sur le sous-domaine `le-club-des-rh-2024.webflow.io`**, pas sur les domaines personnalisés.
-3. Tester `https://le-club-des-rh-2024.webflow.io/calculateur-rpo` : parcours complet, mobile, puis clic sur « Prendre rendez-vous » et vérification que le message du formulaire de contact est pré-rempli.
-4. Quand tout est bon, publier sur `leclubdesrh.fr`. ⚠️ Une publication complète envoie aussi les autres modifications du site en attente.
-
-La section conservée du template (« En recherche d'un consultant freelance RH ? »), les témoignages et la FAQ sont toujours sur la page : à garder ou supprimer selon le rendu voulu.
+### Pour le web designer
+Le code personnalisé ne s'exécute pas dans l'aperçu du Designer : il faut publier pour voir le simulateur.
+1. Décocher « Brouillon » dans les paramètres de la page.
+2. Publier **uniquement sur `le-club-des-rh-2024.webflow.io`**.
+3. Tester : parcours complet, affichage mobile, puis clic sur « Prendre rendez-vous » → le message du formulaire de contact doit être pré-rempli avec le résumé de la simulation.
+4. Publier sur `leclubdesrh.fr` (attention : une publication complète envoie aussi les autres modifications en attente du site).
 
 ---
 
@@ -109,34 +107,35 @@ Tous les noms correspondent au §29 du cahier des charges. Précisions de périm
 
 ---
 
-## 3. Zapier
+## 3. Remontée vers Airtable et Pipedrive
 
-### Zap 1 — Simulations anonymes → Airtable
-1. *Webhooks by Zapier → Catch Hook*. Copier l'URL dans `snapshot_webhook_url` (`config.js`).
-2. *Airtable → Create Record* : base **Simulateur capacité recrutement** (`appcGooK1oGE27CYQ`), table **Simulations** (`tblQjJQELUFandXjl`).
-3. Les noms de champs Airtable reprennent exactement les noms envoyés (`capacity_gap`, `rpo_days`…), le mapping est direct.
+### Ce qui est prêt
+- **Base Airtable** « Simulateur capacité recrutement » (`appcGooK1oGE27CYQ`), table **Simulations** (`tblQjJQELUFandXjl`), 38 champs.
+- **Automatisation Airtable** « Simulation reçue (webhook) » (`wflWFwFqK3XeV8kth`) : reçoit un JSON et crée la ligne, les 36 champs sont mappés. Elle est **en brouillon : à activer dans l'interface Airtable** (un agent ne peut pas la déployer).
+- **Zap « Simulateur »** (Zapier, brouillon) : déclencheur *Catch Hook* sur `https://hooks.zapier.com/hooks/catch/15932003/4df2p7r/`, action *Webhooks POST* vers le webhook Airtable, type **Raw**, en-tête `Content-Type: application/json`. Plusieurs requêtes de test y sont déjà arrivées.
+- **La page envoie déjà** chaque simulation terminée vers ce Catch Hook (script en pied de page).
 
-Objectif : mesurer le volume réel, la distribution des gaps et préparer les benchmarks de la V2. Ne jamais y ajouter d'email, de nom ou d'entreprise : l'enregistrement doit rester anonyme.
+### Ce qu'il reste (environ 3 minutes, dans l'éditeur Zapier)
+L'éditeur Zapier ne se laisse pas piloter de façon fiable par un agent : le champ **Data** de l'action doit être renseigné à la main.
+1. Étape 1 → onglet **Test** → **Find new records** → choisir la requête la plus récente → **Continue**.
+2. Étape 2 → onglet **Configure** → champ **Data** : cliquer l'icône d'insertion de données et composer le corps JSON, par exemple
+   `{"simulation_id":"<Simulation Id>","capacity_gap":"<Capacity Gap>", …}` en insérant chaque valeur depuis le sélecteur.
+   Plus rapide : passer l'action sur *Airtable → Create Record* après avoir ré-autorisé la connexion Airtable pour cette base, et mapper les champs par leur nom.
+3. **Test step** : Airtable doit répondre `{"success": true}`.
+4. Publier le Zap, puis activer l'automatisation Airtable.
 
-### Zap 2 — Demandes de contact → Pipedrive
-Déclencheur : *Webflow → New Form Submission* sur le formulaire `/client-contact` existant (il porte désormais les champs cachés de la simulation).
-1. *Pipedrive → Find Organization* par `Company` (créer si absente).
-2. *Pipedrive → Find Person* par `email` → *Create/Update Person*.
-3. *Create Lead* (ou Deal selon vos règles), puis *Create Note* :
-   ```
-   Simulateur capacité recrutement ({{simulation_id}})
-   Besoin total : {{total_hiring_need}} recrutements sur {{period_months}} mois
-   Capacité interne : {{internal_capacity}} ({{capacity_coverage_percentage}} %)
-   Capacity Gap : {{capacity_gap}} — dont {{complex_hires}} complexes
-   RPO simulé : {{rpo_days}} jours — {{rpo_cost}} € HT
-   Allocation : {{internal_mix_hires}} interne / {{rpo_mix_hires}} RPO / {{agency_mix_hires}} cabinet — {{total_allocation_cost}} € HT
-   Source : {{utm_source}} / {{utm_medium}} / {{utm_campaign}}
-   ```
-   Recommandé : des champs personnalisés Pipedrive (Gap, Budget RPO, Complexes, Source) pour pouvoir filtrer.
-4. Optionnel : *Airtable → Find Record* par `simulation_id` puis *Update Record* en cochant **Demande de contact**, pour relier la simulation à la demande.
+En attendant, **GA4 reçoit déjà tout** : volumes, gap, besoin total, source et campagne pour chaque simulation.
 
-### Brevo
-Plus d'envoi de simulation par email. Si vous voulez ajouter le contact à une liste, faites-le depuis le Zap 2, en respectant vos règles de consentement.
+### Pipedrive
+Le Zap existant `/client-contact` → Pipedrive doit recevoir les nouveaux champs cachés (ils arrivent avec la soumission du formulaire) et créer l'affaire sur le pipeline **Régie**. Note suggérée :
+```
+Simulateur capacité recrutement ({{simulation_id}})
+Besoin total : {{total_hiring_need}} sur {{period_months}} mois
+Capacité interne : {{internal_capacity}} ({{capacity_coverage_percentage}} %)
+Capacity Gap : {{capacity_gap}} — dont {{complex_hires}} complexes
+RPO simulé : {{rpo_days}} jours — {{rpo_cost}} € HT
+Source : {{utm_source}} / {{utm_medium}} / {{utm_campaign}}
+```
 
 ---
 
